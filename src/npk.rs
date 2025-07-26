@@ -1,7 +1,10 @@
+use core::panic;
 use std::{cmp, io::Read};
 
+use crate::hash::{self, HashFn};
+
 #[derive(Debug)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct Header {
     pub magic: u32,
     pub entries: u32,
@@ -11,7 +14,7 @@ pub struct Header {
     pub entry_offset: u32,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct FileEntry {
     pub id: u32,
     pub offset: u32,
@@ -46,7 +49,9 @@ impl std::fmt::Debug for FileEntry {
         let raw_size = self.raw_size;
         let checksum_packed = self.checksum_packed;
         let checksum_raw = self.checksum_raw;
-        write!(f, "FileEntry {{ id: {:08x}, offset: {:08x}, packed_size: {}, raw_size: {}, checksum_packed: {:08x}, checksum_raw: {:08x}, is_compressed: {:?}, is_encrypted: {:?} }}",
+        write!(
+            f,
+            "FileEntry {{ id: {:08x}, offset: {:08x}, packed_size: {}, raw_size: {}, checksum_packed: {:08x}, checksum_raw: {:08x}, is_compressed: {:?}, is_encrypted: {:?} }}",
             id,
             offset,
             packed_size,
@@ -56,6 +61,24 @@ impl std::fmt::Debug for FileEntry {
             self.compression_mode(),
             self.encryption_mode(),
         )
+    }
+}
+
+impl Header {
+    pub fn hash_mode(&self) -> u32 {
+        if self.hash_mode != 1 || self.unknown_1 != 0 || self.entry_encryption_mode != 0 {
+            2
+        } else {
+            0
+        }
+    }
+
+    pub fn hash_fn(&self) -> HashFn {
+        match self.hash_mode() {
+            0 => panic!("Unsupported hash mode: 0"),
+            2 => hash::hash_murmur3,
+            _ => panic!("Unsupported hash mode: {}", self.hash_mode()),
+        }
     }
 }
 
@@ -130,9 +153,9 @@ impl FileEntry {
     }
 }
 pub struct NpkIterator<'a> {
-    data: &'a [u8],
-    header: &'a Header,
-    entries: &'a [FileEntry],
+    pub data: &'a [u8],
+    pub header: &'a Header,
+    pub entries: &'a [FileEntry],
 
     current: usize,
 }

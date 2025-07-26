@@ -18,3 +18,23 @@ the `redirect.nxs` is removed, and the script loading seems to be handled by the
 The `marshal` format of the Python language stays untouched,
 so the `marshal` module can be used to load the unpacked code objects.
 The opcodes has been shuffled as well, so the `dis` module can't be used to disassemble the code objects.
+
+## Usage
+
+Extract the python scripts and generate file list
+
+```bash
+cargo run ./dat/script.npk
+
+# make sure to use the same python version as the one used in the game
+# to be able to load the code objects
+python3.11 ./scripts/generate_filelist.py
+```
+
+Or else you can hook the hash function in the game and dump the file list.
+
+Then you can pass the file list to the tool to unpack assets
+
+```bash
+cargo run ./dat/wwise.mini.npk ./dat/ui.mini.npk ./dat/strings.list
+```
